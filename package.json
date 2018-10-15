@@ -1,0 +1,15 @@
+{
+  "name": "express-firebase",
+  "version": "1.0.0",
+  "description": "This is express js firebase tutorial",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kenneth Phang <kenneth.phang@acorncodinglab.com> (https://github.com/kenken64/fitbit-oauth2/wiki)",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.4",
+    "firebase-admin": "^6.0.0"
+  }
+}
