@@ -2,10 +2,27 @@ const express = require("express");
 const admin = require("firebase-admin");
 const bodyParser = require("body-parser");
 const uuidv5 = require('uuid/v5');
-
+const multer = require('multer');
+const cors = require('cors');
+const googleStorage = require('@google-cloud/storage');
+console.log(googleStorage);
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json({limit: "50mb"}));
+app.use(cors());
+//export GOOGLE_APPLICATION_CREDENTIALS=/Users/phangty/Projects/express-firebase/onfire.json
+const gStorage = googleStorage({
+    projectId: "day26-38142"
+});
+console.log(gStorage);
+const bucket = gStorage.bucket("day26-38142.appspot.com");
+
+const googleMulter = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize:  20 * 1024 * 1024 //20MB
+    }
+})
 
 const credFile = process.env.SERVICEACC_CRED_FILE || "./onfire.json";
 console.log(credFile);
@@ -24,6 +41,7 @@ admin.firestore.FieldValue.serverTimestamp();
 var db  = admin.firestore();
 var deliveryCollection = db.collection('delivery');
 var dhlPricingCollection = db.collection('dhl_pricing');
+var galleryCollection = db.collection('gallery');
 
 var unSubscribe = subscribeDelivery();
 
@@ -44,6 +62,84 @@ function subscribeDelivery(){
         }
     });
 }
+
+
+function debugReq(req,res,next){
+    //console.log(req);
+    console.log(req.file);
+    next();
+}
+
+app.post(API_URI + '/upload', debugReq, googleMulter.single('img'), (req, res)=>{
+    console.log("upload ....");
+    if(req.file != null){
+        console.log("Got it !");
+        console.log(req.file);
+        uploadToFirebase(req.file).then((result)=>{
+            console.log(result);
+            console.log(result.data);
+            var galleryData = {
+                filename: result
+            }
+            galleryCollection
+            .add(galleryData)
+            .then(result => res.status(200).json(galleryData))
+            .catch(error => res.status(500).json(error));
+        }).catch((error)=>{
+            console.log(error);
+            res.status(500).json(error);
+        })
+    }else{
+        res.status(500).json({error: "error in uploading"});
+    }
+    
+});
+
+
+const uploadToFirebase = (fileObject)=> {
+    return new Promise((resolve, reject)=>{
+        if(!fileObject){
+            reject('Invalid file upload');
+        }
+
+        let idValue =  uuidv5('upload.kennethphang.asia', uuidv5.DNS);
+        console.log(idValue);
+        
+        let newFilename = `${idValue}_${fileObject.originalname}`
+        console.log(newFilename);
+        
+        let firebaseFileUpload = bucket.file(newFilename);
+        console.log(firebaseFileUpload);
+        
+        const blobStream = firebaseFileUpload.createWriteStream({
+            metadata: {
+                contentType: fileObject.mimeType
+            }
+        });
+
+        blobStream.on("error", (error)=>{
+            console.log("error !!!! " + error);
+            reject("Error in uploading file stream problem !");
+        });
+
+        blobStream.on("finish", ()=>{
+            console.log("FINISH !");
+            let firebaseUrl = `https://firebasestorage.googleapis.com/v0/b/day26-38142.appspot.com/o/${firebaseFileUpload.name}?alt=media&token=c31d1760-fbaf-4986-858d-017a0ee93e0c`;
+            fileObject.fileURL = firebaseUrl;
+            resolve(firebaseUrl);
+        });
+
+        blobStream.end(fileObject.buffer);
+    });
+}
+
+
+app.post(API_URI + '/multiple-upload', googleMulter.array('imgs', 12), function (req, res, next) {
+    res.status(200).json({});
+});
+
+
+
 
 app.get(API_URI + '/delivery-person',(req, res)=>{
     //deliveryCollection.

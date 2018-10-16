@@ -6,10 +6,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Kenneth Phang <kenneth.phang@acorncodinglab.com> (https://github.com/kenken64/fitbit-oauth2/wiki)",
+  "author": "Kenneth Phang",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/storage": "^1.6.0",
+    "cors": "^2.8.4",
     "express": "^4.16.4",
-    "firebase-admin": "^6.0.0"
+    "firebase-admin": "^6.0.0",
+    "multer": "^1.4.1"
   }
 }
