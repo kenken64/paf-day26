@@ -213,9 +213,7 @@ app.post(API_URI + '/delivery-person', (req, res)=>{
 
 app.post(API_URI + '/delivery-person2', (req, res)=>{
     let deliveryPerson = req.body;
-    let deliveryPersonStr = JSON.stringify(deliveryPerson);
-    deliveryPerson = JSON.parse(deliveryPersonStr);
-    console.log(deliveryPerson);
+    deliveryPerson = { ...req.body };
     deliveryCollection
         .add(deliveryPerson)
         .then(result => res.status(200).json(result))
