@@ -204,8 +204,20 @@ app.get(API_URI + '/delivery-person2',(req, res)=>{
 app.post(API_URI + '/delivery-person', (req, res)=>{
     let deliveryPerson = req.body;
     console.log(deliveryPerson);
+    let idValue =  uuidv5('kennethphang.asia', uuidv5.DNS);
     deliveryCollection.doc(idValue)
         .create(deliveryPerson)
+        .then(result => res.status(200).json(result))
+        .catch(error => res.status(500).json(error));
+});
+
+app.post(API_URI + '/delivery-person2', (req, res)=>{
+    let deliveryPerson = req.body;
+    let deliveryPersonStr = JSON.stringify(deliveryPerson);
+    deliveryPerson = JSON.parse(deliveryPersonStr);
+    console.log(deliveryPerson);
+    deliveryCollection
+        .add(deliveryPerson)
         .then(result => res.status(200).json(result))
         .catch(error => res.status(500).json(error));
 });
