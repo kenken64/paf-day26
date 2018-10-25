@@ -1,20 +1,20 @@
 const express = require("express");
 const admin = require("firebase-admin");
 const bodyParser = require("body-parser");
-const uuidv5 = require('uuid/v5');
+const uuidv4 = require('uuid/v4');
 const multer = require('multer');
 const cors = require('cors');
-const googleStorage = require('@google-cloud/storage');
-console.log(googleStorage);
+const { Storage } = require('@google-cloud/storage');
+
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json({limit: "50mb"}));
 app.use(cors());
-//export GOOGLE_APPLICATION_CREDENTIALS=/Users/phangty/Projects/express-firebase/onfire.json
-const gStorage = googleStorage({
+
+//export GOOGLE_APPLICATION_CREDENTIALS=/Users/phangty/Projects/paf-day26/onfire.json
+const gStorage = new Storage({
     projectId: "day26-38142"
 });
-console.log(gStorage);
 const bucket = gStorage.bucket("day26-38142.appspot.com");
 
 const googleMulter = multer({
@@ -25,7 +25,6 @@ const googleMulter = multer({
 })
 
 const credFile = process.env.SERVICEACC_CRED_FILE || "./onfire.json";
-console.log(credFile);
 var serviceAccount = require(credFile);
 
 admin.initializeApp({
@@ -39,9 +38,13 @@ var updateCounter = 0;
 
 admin.firestore.FieldValue.serverTimestamp();
 var db  = admin.firestore();
+const settings = { timestampsInSnapshots: true};
+db.settings(settings);
 var deliveryCollection = db.collection('delivery');
 var dhlPricingCollection = db.collection('dhl_pricing');
 var galleryCollection = db.collection('gallery');
+var stallCollection = db.collection('stall');
+
 
 var unSubscribe = subscribeDelivery();
 
@@ -64,13 +67,7 @@ function subscribeDelivery(){
 }
 
 
-function debugReq(req,res,next){
-    //console.log(req);
-    console.log(req.file);
-    next();
-}
-
-app.post(API_URI + '/upload', debugReq, googleMulter.single('img'), (req, res)=>{
+app.post(API_URI + '/upload', googleMulter.single('img'), (req, res)=>{
     console.log("upload ....");
     if(req.file != null){
         console.log("Got it !");
@@ -102,7 +99,7 @@ const uploadToFirebase = (fileObject)=> {
             reject('Invalid file upload');
         }
 
-        let idValue =  uuidv5('upload.kennethphang.asia', uuidv5.DNS);
+        let idValue =  uuidv4();
         console.log(idValue);
         
         let newFilename = `${idValue}_${fileObject.originalname}`
@@ -139,6 +136,33 @@ app.post(API_URI + '/multiple-upload', googleMulter.array('imgs', 12), function 
 });
 
 
+app.get(API_URI + '/foodstall',(req, res)=>{
+    let idValue = req.query.id;
+    stallCollection.doc(idValue).get()
+    .then(result => {
+        console.log(result.data());
+        let stallCombined = {
+            stallName: result.data(),
+            foods : [],
+        }
+        stallCollection.doc(idValue).collection("food_menu").get()
+        .then(snapshot => {
+            console.log(snapshot);
+            snapshot.forEach(doc => {
+                console.log(doc.id, '=>', doc.data());
+                stallCombined.foods.push(doc.data());
+            });
+            console.log(stallCombined.foods);
+            res.status(200).json(stallCombined);
+        })
+        .catch(err => {
+            console.log('Error getting food menu', err);
+        });
+    })
+    .catch(err => {
+        console.log('Error getting stalls', err);
+    });
+});
 
 
 app.get(API_URI + '/delivery-person',(req, res)=>{
@@ -204,7 +228,7 @@ app.get(API_URI + '/delivery-person2',(req, res)=>{
 app.post(API_URI + '/delivery-person', (req, res)=>{
     let deliveryPerson = req.body;
     console.log(deliveryPerson);
-    let idValue =  uuidv5('kennethphang.asia', uuidv5.DNS);
+    let idValue =  uuidv4();
     deliveryCollection.doc(idValue)
         .create(deliveryPerson)
         .then(result => res.status(200).json(result))
@@ -222,7 +246,7 @@ app.post(API_URI + '/delivery-person2', (req, res)=>{
 
 app.post(API_URI + '/delivery-person/uuid/', (req, res)=>{
     let deliveryPerson = req.body;
-    let idValue =  uuidv5('kennethphang.asia', uuidv5.DNS);
+    let idValue =  uuidv4();
     //let idValue = req.params.id;
     console.log(deliveryPerson);
     deliveryCollection.doc(idValue)
@@ -275,4 +299,5 @@ app.get(API_URI + '/subscribe-delivery', (req, res)=>{
             updateCounter: updateCounter});
 })
 
-app.listen(3000,  ()=>{});
+const NODE_PORT = process.env.PORT | 3000;
+app.listen(NODE_PORT,  ()=>{ console.log(`Backend started at ${NODE_PORT} ${new Date()}`)});
