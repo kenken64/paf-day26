@@ -12,8 +12,12 @@ app.use(bodyParser.json({limit: "50mb"}));
 app.use(cors());
 
 //export GOOGLE_APPLICATION_CREDENTIALS=/Users/phangty/Projects/paf-day26/onfire.json
+//setx GOOGLE_APPLICATION_CREDENTIALS=/Users/phangty/Projects/paf-day26/onfire.json
+//set GOOGLE_APPLICATION_CREDENTIALS=/Users/phangty/Projects/paf-day26/onfire.json
+var gCloudEnv = require('./onfire.json');
+console.log(gCloudEnv.project_id);
 const gStorage = new Storage({
-    projectId: "day26-38142"
+    projectId: gCloudEnv.project_id
 });
 const bucket = gStorage.bucket("day26-38142.appspot.com");
 
@@ -101,16 +105,15 @@ const uploadToFirebase = (fileObject)=> {
 
         let idValue =  uuidv4();
         console.log(idValue);
-        
         let newFilename = `${idValue}_${fileObject.originalname}`
         console.log(newFilename);
         
         let firebaseFileUpload = bucket.file(newFilename);
         console.log(firebaseFileUpload);
-        
+        console.log("fileObject.mimeType > " + fileObject.mimetype);
         const blobStream = firebaseFileUpload.createWriteStream({
             metadata: {
-                contentType: fileObject.mimeType
+                contentType: fileObject.mimetype
             }
         });
 
